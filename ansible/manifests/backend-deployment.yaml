@@ -19,13 +19,6 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
-          # env:
-          #   - name: ENCRYPTION_KEY
-          #     value: bVck39AsLz8KNJY_UIT3uhZfRuFNDBRWv91lFEq4bF0=
-          #   - name: JWT_SECRET_KEY
-          #     value: gK5t8s3Wv9z0Xy2Lm5Np6Qr8Bj7Hu1Ds
-          #   - name: ML_SERVICE_URL
-          #     value: http://ml-service:5001/predict
           env:
             - name: JWT_SECRET_KEY
               value: "{{ jwt_secret_key }}"
@@ -33,8 +26,15 @@ spec:
               value: "{{ encryption_key }}"
             - name: ML_SERVICE_URL
               value: "{{ ml_service_url }}"
+          volumeMounts:
+            - name: log-volume
+              mountPath: /app/logs
+          workingDir: /app
           resources:
             requests:
               cpu: 100m
             limits:
               cpu: 500m
+      volumes:
+        - name: log-volume
+          emptyDir: {}

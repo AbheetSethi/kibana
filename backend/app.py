@@ -63,7 +63,7 @@ if counter_collection.count_documents({"_id": "patient_id"}) == 0:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler('/var/log/backend/backend.log')
+file_handler = logging.FileHandler('/app/logs/backend.log')
 file_handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
