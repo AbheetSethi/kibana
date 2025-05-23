@@ -1,0 +1,13 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/backend/*.log
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+
+output.logstash:
+  hosts: ["logstash:5044"]

@@ -1,0 +1,14 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/backend/backend.log
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+
+setup.kibana:
+  host: "http://kibana:5601"
+
+setup.dashboards.enabled: true
+setup.template.enabled: true

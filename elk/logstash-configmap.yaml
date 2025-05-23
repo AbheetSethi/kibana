@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+  namespace: default
+data:
+  logstash.conf: |
+    input {
+      file {
+        path => "/usr/share/logstash/logs/backend.log"
+        start_position => "beginning"
+        sincedb_path => "/dev/null"
+      }
+    }
+
+    output {
+      elasticsearch {
+        hosts => ["http://elasticsearch:9200"]
+        index => "backend-logs-%{+YYYY.MM.dd}"
+      }
+      stdout { codec => rubydebug }
+    }

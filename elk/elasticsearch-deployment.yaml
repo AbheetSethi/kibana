@@ -1,0 +1,90 @@
+---
+# Elasticsearch Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+  namespace: default 
+  labels:
+    app: elasticsearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.7.0
+        ports:
+        - containerPort: 9200
+        env:
+        - name: discovery.type
+          value: single-node
+        - name: xpack.security.enabled
+          value: "false"
+        - name: xpack.security.http.ssl.enabled
+          value: "false"
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: 1
+          requests:
+            memory: 1Gi
+            cpu: 500m
+        volumeMounts:
+        - name: elasticsearch-data
+          mountPath: /usr/share/elasticsearch/data
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 9200
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9200
+          initialDelaySeconds: 60
+          periodSeconds: 20
+      volumes:
+      - name: elasticsearch-data
+        persistentVolumeClaim:
+          claimName: elasticsearch-pvc
+
+---
+# Persistent Volume Claim for Elasticsearch data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-pvc
+  namespace: default  
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Elasticsearch Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: default  
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+  - protocol: TCP
+    port: 9200
+    targetPort: 9200
+  type: ClusterIP

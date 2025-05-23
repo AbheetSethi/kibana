@@ -1,0 +1,11 @@
+ansible-playbook -i inventory playbook.yml
+
+kubectl port-forward service/backend 5000:5000
+kubectl port-forward service/ml-service 5001:5001
+kubectl port-forward service/frontend 3000:3000
+
+sudo lsof -i :5000
+sudo lsof -i :5001
+sudo lsof -i :3000
+
+sudo kill -9 <PID>

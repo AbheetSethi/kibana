@@ -1,0 +1,66 @@
+# Kibana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: default
+  labels:
+    app: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: kibana
+        image: docker.elastic.co/kibana/kibana:8.7.0
+        ports:
+        - containerPort: 5601
+        env:
+        - name: ELASTICSEARCH_HOSTS
+          value: "http://elasticsearch:9200"
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: 500m
+          requests:
+            memory: 512Mi
+            cpu: 250m
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5601
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5601
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          failureThreshold: 3
+
+---
+# Kibana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: default
+spec:
+  selector:
+    app: kibana
+  ports:
+  - protocol: TCP
+    port: 5601
+    targetPort: 5601
+  type: ClusterIP

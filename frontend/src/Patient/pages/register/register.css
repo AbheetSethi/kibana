@@ -1,0 +1,52 @@
+.register-outer-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f9fafc;
+}
+
+.register-paper {
+  padding: 32px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.register-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.register-icon {
+  background-color: #4051B5;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.register-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.register-form .MuiTextField-root {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.register-button {
+  margin-top: 16px;
+  background-color: #4051B5 !important;
+  color: white;
+}

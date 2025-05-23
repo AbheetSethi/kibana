@@ -1,0 +1,110 @@
+- name: Deploy to Kubernetes using Ansible
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vault/secrets.yml 
+    
+  collections:
+    - kubernetes.core
+
+  tasks:
+    # - name: Apply Elasticsearch deployment
+    #   kubernetes.core.k8s:
+    #     state: present
+    #     src: ../elk/elasticsearch-deployment.yaml
+
+    # - name: Apply Logstash ConfigMap
+    #   kubernetes.core.k8s:
+    #     state: present
+    #     src: ../elk/logstash-configmap.yaml
+
+    # - name: Apply Logstash deployment
+    #   kubernetes.core.k8s:
+    #     state: present
+    #     src: ../elk/logstash-deployment.yaml
+
+    # - name: Apply Kibana deployment
+    #   kubernetes.core.k8s:
+    #     state: present
+    #     src: ../elk/kibana-deployment.yaml
+
+    # --- Your existing app microservices deployment ---
+
+    - name: Render backend deployment template with secrets
+      template:
+        src: manifests/backend-deployment.yaml.j2
+        dest: /tmp/backend-deployment.yaml
+
+    - name: Deploy backend
+      kubernetes.core.k8s:
+        state: present
+        src: /tmp/backend-deployment.yaml
+        kubeconfig: ~/.kube/config
+        
+    # - name: Deploy backend
+    #   kubernetes.core.k8s:
+    #     state: present
+    #     src: manifests/backend-deployment.yaml
+
+    - name: Expose backend
+      kubernetes.core.k8s:
+        state: present
+        src: manifests/backend-service.yaml
+        kubeconfig: ~/.kube/config
+
+    - name: Deploy ml-service
+      kubernetes.core.k8s:
+        state: present
+        src: manifests/ml-deployment.yaml
+        kubeconfig: ~/.kube/config
+
+    - name: Expose ml-service
+      kubernetes.core.k8s:
+        state: present
+        src: manifests/ml-service.yaml
+        kubeconfig: ~/.kube/config
+
+    - name: Deploy frontend
+      kubernetes.core.k8s:
+        state: present
+        src: manifests/frontend-deployment.yaml
+        kubeconfig: ~/.kube/config
+
+    - name: Expose frontend
+      kubernetes.core.k8s:
+        state: present
+        src: manifests/frontend-service.yaml
+        kubeconfig: ~/.kube/config
+
+    - name: Apply backend HPA
+      kubernetes.core.k8s:
+        state: present
+        src: manifests/backend-hpa.yaml
+        kubeconfig: ~/.kube/config
+
+    - name: Apply ml-service HPA
+      kubernetes.core.k8s:
+        state: present
+        src: manifests/ml-service-hpa.yaml
+        kubeconfig: ~/.kube/config
+
+    - name: Apply frontend HPA
+      kubernetes.core.k8s:
+        state: present
+        src: manifests/frontend-hpa.yaml
+        kubeconfig: ~/.kube/config
+
+    # - name: Port forward backend service
+    #   ansible.builtin.shell: kubectl port-forward service/backend 5000:5000 &
+    #   async: 3600
+    #   poll: 0
+
+    # - name: Port forward frontend service
+    #   ansible.builtin.shell: kubectl port-forward service/frontend 3000:3000 &
+    #   async: 3600
+    #   poll: 0
+
+    # - name: Port forward ml-service service
+    #   ansible.builtin.shell: kubectl port-forward service/ml-service 5001:5001 &
+    #   async: 3600
+    #   poll: 0

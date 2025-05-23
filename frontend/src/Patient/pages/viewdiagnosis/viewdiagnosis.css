@@ -1,0 +1,50 @@
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+  
+  .status-pending {
+    background-color: #f8f9fa;
+    color: #666;
+  }
+  
+  .status-inprogress {
+    background-color: #fff4e5;
+    color: #ab6100;
+  }
+  
+  .status-completed {
+    background-color: #e6f7ee;
+    color: #0d904f;
+  }
+  
+  .modal-details {
+    margin-bottom: 16px;
+  }
+  
+  .modal-label {
+    color: #666;
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+  }
+  
+  .modal-value {
+    font-size: 1rem;
+  }
+  
+  .image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .diagnosis-image {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+  }
+  

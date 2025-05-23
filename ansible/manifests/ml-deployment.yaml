@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-service
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-service
+  template:
+    metadata:
+      labels:
+        app: ml-service
+    spec:
+      containers:
+        - name: ml-service
+          image: abheetsethi/ml-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5001
+          resources:
+            requests:
+              cpu: 100m
+            limits:
+              cpu: 500m

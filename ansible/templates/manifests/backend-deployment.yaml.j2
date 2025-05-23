@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: default  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: iiitbroshan/backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          # env:
+          #   - name: ENCRYPTION_KEY
+          #     value: bVck39AsLz8KNJY_UIT3uhZfRuFNDBRWv91lFEq4bF0=
+          #   - name: JWT_SECRET_KEY
+          #     value: gK5t8s3Wv9z0Xy2Lm5Np6Qr8Bj7Hu1Ds
+          #   - name: ML_SERVICE_URL
+          #     value: http://ml-service:5001/predict
+          env:
+            - name: JWT_SECRET_KEY
+              value: "{{ jwt_secret_key }}"
+            - name: ENCRYPTION_KEY
+              value: "{{ encryption_key }}"
+            - name: ML_SERVICE_URL
+              value: "{{ ml_service_url }}"
+          resources:
+            requests:
+              cpu: 100m
+            limits:
+              cpu: 500m

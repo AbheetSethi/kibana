@@ -1,0 +1,109 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE_NAMESPACE = 'iiitbroshan'  // Your Docker Hub username
+        BACKEND_IMAGE = "${DOCKER_IMAGE_NAMESPACE}/backend:latest"
+        FRONTEND_IMAGE = "${DOCKER_IMAGE_NAMESPACE}/frontend:latest"
+        MLSERVICE_IMAGE = "${DOCKER_IMAGE_NAMESPACE}/ml-service:latest"
+        GIT_REPO_URL = 'https://github.com/Roshan852k/DermaCare.git'
+        KUBECONFIG = '/var/lib/jenkins/.kube/config'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: "${GIT_REPO_URL}"
+            }
+        }
+
+        stage('Build Docker Images') {
+            parallel {
+                stage('Build Backend') {
+                    steps {
+                        sh 'docker build -t backend ./backend'
+                    }
+                }
+                stage('Build Frontend') {
+                    steps {
+                        sh 'docker build -t frontend ./frontend'
+                    }
+                }
+                stage('Build ML Service') {
+                    steps {
+                        sh 'docker build -t ml-service ./ml-service'
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Images') {
+            parallel {
+                stage('Push Backend') {
+                    steps {
+                        script {
+                            docker.withRegistry('', 'DockerHubCred') {
+                                sh "docker tag backend ${BACKEND_IMAGE}"
+                                sh "docker push ${BACKEND_IMAGE}"
+                            }
+                        }
+                    }
+                }
+                stage('Push Frontend') {
+                    steps {
+                        script {
+                            docker.withRegistry('', 'DockerHubCred') {
+                                sh "docker tag frontend ${FRONTEND_IMAGE}"
+                                sh "docker push ${FRONTEND_IMAGE}"
+                            }
+                        }
+                    }
+                }
+                stage('Push ML Service') {
+                    steps {
+                        script {
+                            docker.withRegistry('', 'DockerHubCred') {
+                                sh "docker tag ml-service ${MLSERVICE_IMAGE}"
+                                sh "docker push ${MLSERVICE_IMAGE}"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes with Ansible') {
+            steps {
+                sh '''
+                    ansible-playbook -i ansible/inventory ansible/playbook.yml --vault-password-file ansible/vault_pass.txt
+                '''
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh 'kubectl get pods -l app=backend'
+                sh 'kubectl get pods -l app=frontend'
+                sh 'kubectl get pods -l app=ml-service'
+                sh 'kubectl get svc'
+            }
+        }
+    }
+
+    post {
+        success {
+            mail to: 'roshany852k@gmail.com',
+                 subject: "SUCCESS: Build ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "The build, test, and deployment was successful!"
+        }
+        failure {
+            mail to: 'roshany852k@gmail.com',
+                 subject: "FAILURE: Build ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "The build or deployment failed. Please check the Jenkins logs."
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
+

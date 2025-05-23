@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: backend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5000
+          env:
+            - name: ENCRYPTION_KEY
+              value: bVck39AsLz8KNJY_UIT3uhZfRuFNDBRWv91lFEq4bF0=
+            - name: ML_SERVICE_URL
+              value: http://ml-service:5001/predict
+
