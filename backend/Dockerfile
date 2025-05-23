@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y \
     libgl1-mesa-glx \
     && rm -rf /var/lib/apt/lists/*
 
+# ✅ Create the log directory
+RUN mkdir -p /var/log/backend
+
 # Copy the requirements.txt and install Python dependencies
 COPY requirements.txt /app/
 RUN pip install --upgrade pip
