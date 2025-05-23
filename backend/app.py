@@ -59,6 +59,9 @@ if counter_collection.count_documents({"_id": "user_pid"}) == 0:
 if counter_collection.count_documents({"_id": "patient_id"}) == 0:
     counter_collection.insert_one({"_id": "patient_id", "seq": 1000})
 
+# ✅ Ensure directory exists at runtime
+os.makedirs('/var/log/backend', exist_ok=True)
+
 # Logging configuration for Logstash
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
