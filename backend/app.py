@@ -8,6 +8,7 @@ import os
 from bson import ObjectId
 import requests
 from io import BytesIO
+import json  # ✅ JSON logging
 
 import logging
 from logstash import TCPLogstashHandler  # Logstash logging
@@ -62,14 +63,10 @@ if counter_collection.count_documents({"_id": "patient_id"}) == 0:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# File handler - this logs to a local file
 file_handler = logging.FileHandler('/var/log/backend/backend.log')
 file_handler.setLevel(logging.INFO)
-
-# Optional: add formatting
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
-
 logger.addHandler(file_handler)
 
 logstash_handler = TCPLogstashHandler(
@@ -79,7 +76,13 @@ logstash_handler = TCPLogstashHandler(
 )
 logger.addHandler(logstash_handler)
 
-logger.info('Flask app started from Kubernetes!')
+# ✅ Structured JSON log to confirm app start
+logger.info(json.dumps({
+    "event": "app_started",
+    "source": "kubernetes",
+    "level": "info",
+    "timestamp": datetime.utcnow().isoformat()
+}))
 
 # Auto-increment functions
 def get_next_user_pid():
@@ -108,12 +111,24 @@ def register():
     name = data.get('name')
 
     if not all([username, password, email, name]):
-        logger.warning("Registration failed: Missing fields")
+        logger.warning(json.dumps({
+            "event": "registration_failed",
+            "reason": "missing_fields",
+            "username": username,
+            "level": "warning",
+            "timestamp": datetime.utcnow().isoformat()
+        }))
         return jsonify({"error": "All fields (username, password, email, name) are required"}), 400
 
     existing_user = user_collection.find_one({"username": username})
     if existing_user:
-        logger.warning(f"Registration failed: User {username} already exists")
+        logger.warning(json.dumps({
+            "event": "registration_failed",
+            "reason": "user_exists",
+            "username": username,
+            "level": "warning",
+            "timestamp": datetime.utcnow().isoformat()
+        }))
         return jsonify({"error": "User already exists"}), 409
 
     encrypted_password = encrypt_data(password)
@@ -128,7 +143,16 @@ def register():
     }
 
     user_collection.insert_one(document)
-    logger.info(f"User registered: {username}")
+
+    logger.info(json.dumps({
+        "event": "user_registered",
+        "username": username,
+        "pid": pid,
+        "source": "kubernetes",
+        "level": "info",
+        "timestamp": datetime.utcnow().isoformat()
+    }))
+
     return jsonify({"message": f"User {username} registered successfully", "pid": pid}), 201
 
 # User login
@@ -139,17 +163,39 @@ def login():
     password = data.get('password')
 
     if not username or not password:
-        logger.warning("Login failed: Missing username or password")
+        logger.warning(json.dumps({
+            "event": "login_failed",
+            "reason": "missing_credentials",
+            "username": username,
+            "level": "warning",
+            "timestamp": datetime.utcnow().isoformat()
+        }))
         return jsonify({"error": "Username and password are required"}), 400
 
     user = user_collection.find_one({"username": username})
     if not user or decrypt_data(user["password"]) != password:
-        logger.warning(f"Login failed for user: {username}")
+        logger.warning(json.dumps({
+            "event": "login_failed",
+            "reason": "invalid_credentials",
+            "username": username,
+            "level": "warning",
+            "timestamp": datetime.utcnow().isoformat()
+        }))
         return jsonify({"error": "Invalid credentials"}), 401
 
     access_token = create_access_token(identity=username)
-    logger.info(f"User logged in: {username}")
+
+    logger.info(json.dumps({
+        "event": "user_logged_in",
+        "username": username,
+        "pid": user["pid"],
+        "source": "kubernetes",
+        "level": "info",
+        "timestamp": datetime.utcnow().isoformat()
+    }))
+
     return jsonify({"access_token": access_token, "pid": user["pid"]}), 200
+
 
 # Add patient information
 @app.route('/add_patient_info', methods=['POST'])
@@ -164,8 +210,18 @@ def add_patient_info():
     data["timestamp"] = datetime.now()
 
     patient_collection.insert_one(data)
-    logger.info(f"Patient info added by {current_user} with ID {patient_id}")
+
+    logger.info(json.dumps({
+        "event": "patient_info_added",
+        "created_by": current_user,
+        "patient_id": patient_id,
+        "source": "kubernetes",
+        "level": "info",
+        "timestamp": datetime.utcnow().isoformat()
+    }))
+
     return jsonify({"message": "Patient info added successfully", "patient_id": patient_id}), 201
+
 
 # Get all patient info
 @app.route('/get_patient_info', methods=['GET'])
@@ -175,15 +231,33 @@ def get_patient_info():
     patients = list(patient_collection.find({"created_by": current_user}))
     for p in patients:
         p["_id"] = str(p["_id"])
-    logger.info(f"Fetched patient info for user {current_user}")
+
+    logger.info(json.dumps({
+        "event": "get_patient_info",
+        "fetched_by": current_user,
+        "record_count": len(patients),
+        "source": "kubernetes",
+        "level": "info",
+        "timestamp": datetime.utcnow().isoformat()
+    }))
+
     return jsonify(patients), 200
 
 # Upload image and send to ML model
 @app.route('/upload_image/<patient_id>', methods=['POST'])
 @jwt_required()
 def upload_image(patient_id):
+    current_user = get_jwt_identity()
+
     if 'image' not in request.files:
-        logger.warning("Upload failed: No image file found")
+        logger.warning(json.dumps({
+            "event": "upload_failed",
+            "reason": "no_image_file",
+            "patient_id": patient_id,
+            "requested_by": current_user,
+            "level": "warning",
+            "timestamp": datetime.utcnow().isoformat()
+        }))
         return jsonify({"error": "No image file found"}), 400
 
     image_file = request.files['image']
@@ -201,45 +275,94 @@ def upload_image(patient_id):
                 "timestamp": datetime.now()
             }
             diagnosis_result_collection.insert_one(result)
-            logger.info(f"Prediction saved for patient {patient_id}")
+            logger.info(json.dumps({
+                "event": "prediction_saved",
+                "patient_id": patient_id,
+                "prediction": prediction,
+                "requested_by": current_user,
+                "source": "kubernetes",
+                "level": "info",
+                "timestamp": datetime.utcnow().isoformat()
+            }))
             return jsonify({"prediction": prediction}), 200
         else:
-            logger.error(f"ML service error: {response.text}")
+            logger.error(json.dumps({
+                "event": "ml_service_error",
+                "response": response.text,
+                "patient_id": patient_id,
+                "requested_by": current_user,
+                "level": "error",
+                "timestamp": datetime.utcnow().isoformat()
+            }))
             return jsonify({"error": "ML service error"}), 500
     except Exception as e:
-        logger.error(f"Error connecting to ML service: {e}")
+        logger.error(json.dumps({
+            "event": "ml_service_connection_failed",
+            "error": str(e),
+            "patient_id": patient_id,
+            "requested_by": current_user,
+            "level": "error",
+            "timestamp": datetime.utcnow().isoformat()
+        }))
         return jsonify({"error": "Error connecting to ML service"}), 500
+
 
 # Get diagnosis result
 @app.route('/get_diagnosis/<patient_id>', methods=['GET'])
 @jwt_required()
 def get_diagnosis(patient_id):
+    current_user = get_jwt_identity()
     results = list(diagnosis_result_collection.find({"patient_id": patient_id}))
     for r in results:
         r["_id"] = str(r["_id"])
-    logger.info(f"Diagnosis results fetched for patient {patient_id}")
+    logger.info(json.dumps({
+        "event": "diagnosis_results_fetched",
+        "patient_id": patient_id,
+        "fetched_by": current_user,
+        "record_count": len(results),
+        "level": "info",
+        "timestamp": datetime.utcnow().isoformat()
+    }))
     return jsonify(results), 200
+
 
 # Request diagnosis
 @app.route('/request_diagnosis', methods=['POST'])
 @jwt_required()
 def request_diagnosis():
+    current_user = get_jwt_identity()
     data = request.json
     data["timestamp"] = datetime.now()
-    data["requested_by"] = get_jwt_identity()
+    data["requested_by"] = current_user
     request_collection.insert_one(data)
-    logger.info(f"Diagnosis requested by {data['requested_by']}")
+
+    logger.info(json.dumps({
+        "event": "diagnosis_requested",
+        "requested_by": current_user,
+        "details": data,
+        "level": "info",
+        "timestamp": datetime.utcnow().isoformat()
+    }))
     return jsonify({"message": "Diagnosis request submitted"}), 201
+
 
 # View diagnosis requests
 @app.route('/get_requests', methods=['GET'])
 @jwt_required()
 def get_requests():
+    current_user = get_jwt_identity()
     requests_data = list(request_collection.find())
     for r in requests_data:
         r["_id"] = str(r["_id"])
-    logger.info("Diagnosis requests fetched")
+    logger.info(json.dumps({
+        "event": "diagnosis_requests_fetched",
+        "fetched_by": current_user,
+        "record_count": len(requests_data),
+        "level": "info",
+        "timestamp": datetime.utcnow().isoformat()
+    }))
     return jsonify(requests_data), 200
+
 
 # Main entry point
 if __name__ == '__main__':
